@@ -83,19 +83,18 @@ RegisterNetEvent("qb-garage:server:UpdateSpawnedVehicle", function(plate, value)
     VehicleSpawnerVehicles[plate] = value
 end)
 
-lib.callback.register('qb-garage:server:spawnvehicle', function(source, vehInfo, coords, warp)
-    local netId = QBCore.Functions.CreateVehicle(source, vehInfo.vehicle, coords, warp)
-    local veh = NetworkGetEntityFromNetworkId(netId)
-    if not veh or not NetworkGetNetworkIdFromEntity(veh) then
-        print('Server:90 | ISSUE HERE', veh, NetworkGetNetworkIdFromEntity(veh))
-    end
-    local vehProps = {}
+
+lib.callback.register('qb-garage:server:spawnvehicle', function(source, cb, vehInfo, coords, warp)
     local plate = vehInfo.plate
+    local veh = QBCore.Functions.SpawnVehicle(source, vehInfo.vehicle, coords, warp)
+    SetEntityHeading(veh, coords.w)
+    SetVehicleNumberPlateText(veh, plate)
+    local vehProps = {}
     local result = MySQL.query.await('SELECT mods FROM player_vehicles WHERE plate = ?', {plate})
     if result[1] then vehProps = json.decode(result[1].mods) end
     local netId = NetworkGetNetworkIdFromEntity(veh)
     OutsideVehicles[plate] = {netID = netId, entity = veh}
-    return netId, vehProps
+    cb(netId, vehProps)
 end)
 
 local function GetVehicles(citizenid, garageName, state, cb)
