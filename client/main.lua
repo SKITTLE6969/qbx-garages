@@ -465,7 +465,7 @@ local function JobMenuGarage(garageName)
 
     local vehicles = jobGarage.vehicles[QBCore.Functions.GetPlayerData().job.grade.level]
     for veh, label in pairs(vehicles) do
-        vehicleMenu[#vehicleMenu+1] = {
+        vehicleMenu.options[#vehicleMenu.options+1] = {
             title = label,
             description = "",
             event = "qb-garages:client:TakeOutGarage",
