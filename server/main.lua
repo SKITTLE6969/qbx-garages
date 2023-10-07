@@ -83,8 +83,7 @@ RegisterNetEvent("qb-garage:server:UpdateSpawnedVehicle", function(plate, value)
     VehicleSpawnerVehicles[plate] = value
 end)
 
-
-lib.callback.register('qb-garage:server:spawnvehicle', function(source, cb, vehInfo, coords, warp)
+QBCore.Functions.CreateCallback('qb-garage:server:spawnvehicle', function (source, cb, vehInfo, coords, warp)
     local plate = vehInfo.plate
     local veh = QBCore.Functions.SpawnVehicle(source, vehInfo.vehicle, coords, warp)
     SetEntityHeading(veh, coords.w)
