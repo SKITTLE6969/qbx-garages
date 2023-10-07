@@ -6,17 +6,11 @@ version '1.0.0'
 author 'JDev'
 
 shared_scripts {
-    '@qbx-core/import.lua',
     '@ox_lib/init.lua',
-    '@qbx-core/shared/locale.lua',
+    '@qb-core/shared/locale.lua',
     'config.lua',
     'locales/en.lua',
     'locales/*.lua'
-}
-
-modules {
-    'qbx-core:core',
-    'qbx-core:utils'
 }
 
 client_scripts {
