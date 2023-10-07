@@ -12,7 +12,7 @@ Almost everything is fully customizable to the last bit!
 
 ## Dependencies
  - [qbx-radialmenu](https://github.com/Qbox-project/qbx-radialmenu)
- - [qbx-core](https://github.com/Qbox-project/qbx-core)
+ - [qb-core]
 
 ## Installation
 
