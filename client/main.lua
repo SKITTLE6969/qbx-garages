@@ -713,34 +713,39 @@ RegisterNetEvent("qb-garages:client:GarageMenu", function(data)
     lib.showContext('context_garage_carinfo')
 end)
 
-RegisterNetEvent('qb-garages:client:TakeOutGarage', function(data, cb)
-    local garageType = data.type
-    local vehicleModel = data.vehicleModel
+RegisterNetEvent('qb-garages:client:takeOutGarage', function(data)
+    local type = data.type
     local vehicle = data.vehicle
     local garage = data.garage
-    local spawnDistance = garage.SpawnDistance and garage.SpawnDistance or Config.SpawnDistance
-    local parkingSpots = garage.ParkingSpots or {}
-
-    local location, heading = GetSpawnLocationAndHeading(garage, garageType, parkingSpots, vehicle, spawnDistance)
-    if garage.useVehicleSpawner then
-        SpawnVehicleSpawnerVehicle(vehicleModel, location, heading, cb)
-    else
-        if Config.SpawnVehiclesServerside then
-            local netId, properties = lib.callback.await('qb-garage:server:spawnvehicle', false, vehicle, location, garage.WarpPlayerIntoVehicle or Config.WarpPlayerIntoVehicle and garage.WarpPlayerIntoVehicle == nil)
-            local veh = NetToVeh(netId)
-            if not veh or not netId then
-                print("ISSUE HERE: ", netId)
+    local index = data.index
+    QBCore.Functions.TriggerCallback('qb-garage:server:IsSpawnOk', function(spawn)
+        if spawn then
+            local location
+            if type == "house" then
+                if garage.takeVehicle.h then garage.takeVehicle.w = garage.takeVehicle.h end -- backward compatibility
+                location = garage.takeVehicle
+            else
+                location = garage.spawnPoint
             end
-            UpdateSpawnedVehicle(veh, vehicle, heading, garage, properties)
-            if cb then cb(veh) end
+            QBCore.Functions.TriggerCallback('qb-garage:server:spawnvehicle', function(netId, properties)
+                local veh = NetToVeh(netId)
+                QBCore.Functions.SetVehicleProperties(veh, properties)
+                exports['LegacyFuel']:SetFuel(veh, vehicle.fuel)
+                doCarDamage(veh, vehicle)
+                TriggerServerEvent('qb-garage:server:updateVehicleState', 0, vehicle.plate, index)
+                closeMenuFull()
+                TriggerEvent("vehiclekeys:client:SetOwner", QBCore.Functions.GetPlate(veh))
+                SetVehicleEngineOn(veh, true, true)
+                if type == "house" then
+                    exports['qb-core']:DrawText(Lang:t("info.park_e"), 'left')
+                    InputOut = false
+                    InputIn = true
+                end
+            end, vehicle, location, true)
         else
-            QBCore.Functions.SpawnVehicle(vehicleModel, function(veh)
-                local properties = lib.callback.await('qb-garage:server:GetVehicleProperties', false, vehicle.plate)
-                UpdateSpawnedVehicle(veh, vehicle, heading, garage, properties)
-                if cb then cb(veh) end
-            end, location, true, garage.WarpPlayerIntoVehicle or Config.WarpPlayerIntoVehicle and garage.WarpPlayerIntoVehicle == nil)
+            QBCore.Functions.Notify(Lang:t("error.not_impound"), "error", 5000)
         end
-    end
+    end, vehicle.plate, type)
 end)
 
 RegisterNetEvent('qb-garages:client:OpenMenu', function()
