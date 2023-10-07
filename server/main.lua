@@ -225,34 +225,61 @@ lib.callback.register("qb-garage:server:GetGarageVehicles", function(source, gar
     end
 end)
 
-lib.callback.register("qb-garage:server:checkOwnership", function(source, plate, garageType, garage, gang)
+QBCore.Functions.CreateCallback("qb-garage:server:checkOwnership", function(source, cb, plate, type, house, gang)
     local src = source
     local pData = QBCore.Functions.GetPlayer(src)
-    if garageType == "public" then        --Public garages only for player cars
-        local addSQLForAllowParkingAnyonesVehicle = ""
-        if not Config.AllowParkingAnyonesVehicle then
-            addSQLForAllowParkingAnyonesVehicle = " AND citizenid = '"..pData.PlayerData.citizenid.."' "
-        end
-        local result = MySQL.query.await('SELECT * FROM player_vehicles WHERE plate = ? ' .. addSQLForAllowParkingAnyonesVehicle,{plate})
-        return result[1] and true or false
-    elseif garageType == "house" then     --House garages only for player cars that have keys of the house
-        local result = MySQL.query.await('SELECT * FROM player_vehicles WHERE plate = ?', {plate})
-        return result[1] and true or false
-    elseif garageType == "gang" then        --Gang garages only for gang members cars (for sharing)
-        local result = MySQL.query.await('SELECT * FROM player_vehicles WHERE plate = ?', {plate})
-        if result[1] then
-            --Check if found owner is part of the gang
-            return QBCore.Functions.GetPlayer(source).PlayerData.gang.name == gang
-        else
-            return false
-        end
+    if type == "public" then        --Public garages only for player cars
+        MySQL.query('SELECT * FROM player_vehicles WHERE plate = ? AND citizenid = ?',{plate, pData.PlayerData.citizenid}, function(result)
+            if result[1] then
+                cb(true)
+            else
+                cb(false)
+            end
+        end)
+    elseif type == "house" then     --House garages only for player cars that have keys of the house
+        MySQL.query('SELECT * FROM player_vehicles WHERE plate = ?', {plate}, function(result)
+            if result[1] then
+                local hasHouseKey = exports['qb-houses']:hasKey(result[1].license, result[1].citizenid, house)
+                if hasHouseKey then
+                    cb(true)
+                else
+                    cb(false)
+                end
+            else
+                cb(false)
+            end
+        end)
+    elseif type == "gang" then        --Gang garages only for gang members cars (for sharing)
+        MySQL.query('SELECT * FROM player_vehicles WHERE plate = ?', {plate}, function(result)
+            if result[1] then
+                --Check if found owner is part of the gang
+                local resultplayer = MySQL.single.await('SELECT * FROM players WHERE citizenid = ?', { result[1].citizenid })
+                if resultplayer then
+                    local playergang = json.decode(resultplayer.gang)
+                    if playergang.name == gang then
+                        cb(true)
+                    else
+                        cb(false)
+                    end
+                else
+                    cb(false)
+                end
+            else
+                cb(false)
+            end
+        end)
     else                            --Job garages only for cars that are owned by someone (for sharing and service) or only by player depending of config
         local shared = ''
-        if not TableContains(Config.SharedJobGarages, garage) then
+        if not Config["SharedGarages"] then
             shared = " AND citizenid = '"..pData.PlayerData.citizenid.."'"
         end
-        local result = MySQL.query.await('SELECT * FROM player_vehicles WHERE plate = ?'..shared, {plate})
-        return result?[1] and true or false
+        MySQL.query('SELECT * FROM player_vehicles WHERE plate = ?'..shared, {plate}, function(result)
+            if result[1] then
+                cb(true)
+            else
+                cb(false)
+            end
+        end)
     end
 end)
 
